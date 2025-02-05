@@ -203,19 +203,19 @@ class BetterNick extends PluginBase {
             return true;
         }
 
-        if ($this->nicknames($sender, $nickname)) {
-            $this->tempNicknames[$sender->getName()] = time() + $duration;
-            $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {
-                if (isset($this->tempNicknames[$sender->getName()])) {
-                    $this->resetNickname($sender);
-                    $sender->sendMessage(TextFormat::YELLOW . "BetterNick | Your temporary nickname has expired.");
-                }
-            }), $duration * 20);
-            
-            $sender->sendMessage(TextFormat::GREEN . "BetterNick | Temporary nickname set for " . $timeString);
-            return true;
-        }
-        return false;
+        $this->nicknames[$sender->getName()] = $nickname;  
+        $this->tempNicknames[$sender->getName()] = time() + $duration;  
+
+        $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {  
+           if (isset($this->tempNicknames[$sender->getName()])) {  
+               $this->resetNickname($sender);  
+               $sender->sendMessage(TextFormat::YELLOW . "BetterNick | Your temporary nickname has expired.");  
+               unset($this->tempNicknames[$sender->getName()]);  
+           }  
+       }), $duration * 20);  
+
+       $sender->sendMessage(TextFormat::GREEN . "BetterNick | Temporary nickname set for " . $timeString);
+       return true;
     }
     
     private function handleNickList(CommandSender $sender): bool {
