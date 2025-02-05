@@ -4,11 +4,19 @@ main: Luthfi\BetterNick\BetterNick
 api: 5.0.0
 commands:
   nick:
-    description: Change your nickname
-    usage: "/nick <nickname>"
+    description: Manage Nicknames
+    usage: |
+      /nick <name>
+      /nick set <player> <name>
+      /nick reset <player>
+      /nick list
   unnick:
-    description: Reset your nickname to your default nickname
-    usage: "/unnick"
+    description: Reset your nickname
+    usage: /unnick
   randomnick:
-    description: Set a random nickname
-    usage: "/randomnick"
+    description: Get a random nickname
+    usage: /randomnick
+permissions:
+  betternick.admin:
+    description: Allow managing other player nicknames
+    default: op
