@@ -1,0 +1,14 @@
+name: BetterNick
+version: 1.0.0
+main: Luthfi\BetterNick\BetterNick
+api: 5.0.0
+commands:
+  nick:
+    description: Change your nickname
+    usage: "/nick <nickname>"
+  unnick:
+    description: Reset your nickname to your default nickname
+    usage: "/unnick"
+  randomnick:
+    description: Set a random nickname
+    usage: "/randomnick"
