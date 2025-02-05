@@ -123,7 +123,7 @@ class BetterNick extends PluginBase {
         $sender->sendMessage(TextFormat::GREEN . "BetterNick | Your nickname has been set to " . TextFormat::WHITE . $nickname);
         
         if ($this->isTooSimilar($nickname)) {
-            $player->sendMessage(TextFormat::RED . "BetterNick | That nickname is too similar to existing player names.");
+            $sender->sendMessage(TextFormat::RED . "BetterNick | That nickname is too similar to existing player names.");
             return false;
         }
         
@@ -203,7 +203,7 @@ class BetterNick extends PluginBase {
             return true;
         }
 
-        if ($this->setNickname($sender, $nickname)) {
+        if ($this->nicknames($sender, $nickname)) {
             $this->tempNicknames[$sender->getName()] = time() + $duration;
             $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {
                 if (isset($this->tempNicknames[$sender->getName()])) {
