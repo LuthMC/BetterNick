@@ -7,9 +7,8 @@ commands:
     description: Manage Nicknames
     usage: |
       /nick <name>
-      /nick set <player> <name>
-      /nick reset <player>
-      /nick list
+      /unnick
+      /randomnick
   unnick:
     description: Reset your nickname
     usage: /unnick
