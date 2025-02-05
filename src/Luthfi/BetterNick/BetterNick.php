@@ -8,17 +8,23 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use pocketmine\utils\Config;
+use pocketmine\scheduler\ClosureTask;
+use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\world\sound\PopSound;
 
 class BetterNick extends PluginBase {
 
     private $nicknames = [];
     private $cooldowns = [];
     private $config;
+    private $tempNicknames = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->config = $this->getConfig();
         $this->nicknames = $this->config->get("nicknames", []);
+        $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 
     public function onDisable(): void {
@@ -39,6 +45,24 @@ class BetterNick extends PluginBase {
         }
     }
 
+    public function onPlayerJoin(PlayerJoinEvent $event) {
+        $player = $event->getPlayer();
+        if ($this->config->get("auto_nick_enabled", false)) {
+            $this->applyAutoNick($player);
+        }
+    }
+
+    private function applyAutoNick(Player $player) {
+        $format = $this->config->get("auto_nick_format", "User");
+        $randomNumber = mt_rand(1000, 9999);
+        $nickname = str_replace("{random}", $randomNumber, $format);
+        
+        $this->nicknames[$player->getName()] = $nickname;
+        $player->setDisplayName($nickname);
+        $this->playSound($player);
+        $player->sendMessage(TextFormat::GREEN . "BetterNick | Auto-nickname set to: " . TextFormat::WHITE . $nickname);
+    }
+    
     private function handleNickCommand(CommandSender $sender, array $args): bool {
         if (count($args) === 0) {
             return $this->sendNickHelp($sender);
@@ -52,6 +76,10 @@ class BetterNick extends PluginBase {
                 return $this->handleNickReset($sender, $args);
             case "list":
                 return $this->handleNickList($sender);
+            case "temp":
+                return $this->handleNickTemp($sender, $args);
+            case "resetall":
+                return $this->handleResetAll($sender);
             default:
                 return $this->onNickCommand($sender, array_merge([$subCommand], $args));
         }
@@ -63,7 +91,6 @@ class BetterNick extends PluginBase {
             return true;
         }
 
-        // Cooldown check
         $cooldown = $this->config->get("cooldown", 30);
         if (isset($this->cooldowns[$sender->getName()]) && time() - $this->cooldowns[$sender->getName()] < $cooldown) {
             $remaining = $cooldown - (time() - $this->cooldowns[$sender->getName()]);
@@ -77,15 +104,12 @@ class BetterNick extends PluginBase {
         }
 
         $nickname = implode(" ", $args);
-
-        // Length check
         $maxLength = $this->config->get("max_length", 16);
         if (strlen($nickname) > $maxLength) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | Nickname cannot be longer than $maxLength characters.");
             return true;
         }
 
-        // Blacklist check
         $blacklist = $this->config->get("blacklist", []);
         foreach ($blacklist as $word) {
             if (stripos($nickname, $word) !== false) {
@@ -97,6 +121,11 @@ class BetterNick extends PluginBase {
         $this->nicknames[$sender->getName()] = $nickname;
         $sender->setDisplayName($nickname);
         $sender->sendMessage(TextFormat::GREEN . "BetterNick | Your nickname has been set to " . TextFormat::WHITE . $nickname);
+        
+        if ($this->isTooSimilar($nickname)) {
+            $player->sendMessage(TextFormat::RED . "BetterNick | That nickname is too similar to existing player names.");
+            return false;
+        }
         
         $this->cooldowns[$sender->getName()] = time();
         return true;
@@ -154,6 +183,41 @@ class BetterNick extends PluginBase {
         return true;
     }
 
+    private function handleNickTemp(CommandSender $sender, array $args): bool {
+        if (!$sender instanceof Player) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | This command can only be used in-game.");
+            return true;
+        }
+
+        if (count($args) < 2) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | Usage: /nick temp <nickname> <time>");
+            return true;
+        }
+
+        $timeString = array_pop($args);
+        $nickname = implode(" ", $args);
+        $duration = $this->parseDuration($timeString);
+
+        if ($duration <= 0) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | Invalid duration format. Use s/m/h/d (e.g., 30s, 1h)");
+            return true;
+        }
+
+        if ($this->setNickname($sender, $nickname)) {
+            $this->tempNicknames[$sender->getName()] = time() + $duration;
+            $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {
+                if (isset($this->tempNicknames[$sender->getName()])) {
+                    $this->resetNickname($sender);
+                    $sender->sendMessage(TextFormat::YELLOW . "BetterNick | Your temporary nickname has expired.");
+                }
+            }), $duration * 20);
+            
+            $sender->sendMessage(TextFormat::GREEN . "BetterNick | Temporary nickname set for " . $timeString);
+            return true;
+        }
+        return false;
+    }
+    
     private function handleNickList(CommandSender $sender): bool {
         if (!$sender->hasPermission("betternick.admin")) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission for this command.");
@@ -206,6 +270,61 @@ class BetterNick extends PluginBase {
         return true;
     }
 
+    private function handleResetAll(CommandSender $sender): bool {
+        if (!$sender->hasPermission("betternick.admin")) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission for this command.");
+            return true;
+        }
+
+        foreach ($this->nicknames as $playerName => $nick) {
+            $player = $this->getServer()->getPlayerExact($playerName);
+            if ($player instanceof Player) {
+                $player->setDisplayName($playerName);
+            }
+        }
+
+        $this->nicknames = [];
+        $this->tempNicknames = [];
+        $sender->sendMessage(TextFormat::GREEN . "BetterNick | All nicknames have been reset.");
+        return true;
+    }
+
+    private function parseDuration(string $time): int {
+        $unit = strtolower(substr($time, -1));
+        $value = intval(substr($time, 0, -1));
+
+        return match ($unit) {
+            'd' => $value * 86400,
+            'h' => $value * 3600,
+            'm' => $value * 60,
+            's' => $value,
+            default => 0
+        };
+    }
+
+    private function isTooSimilar(string $nickname): bool {
+        $maxSimilarity = $this->config->get("max_similarity", 3);
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            $name = strtolower($player->getName());
+            $similarity = levenshtein(strtolower($nickname), $name);
+            if ($similarity <= $maxSimilarity && $similarity !== -1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function playSound(Player $player): void {
+        $player->getWorld()->addSound($player->getPosition(), new PopSound(), [$player]);
+    }
+
+    private function resetNickname(Player $player): void {
+        $player->setDisplayName($player->getName());
+        unset($this->nicknames[$player->getName()]);
+        unset($this->tempNicknames[$player->getName()]);
+        $this->playSound($player);
+    }
+    
     private function sendNickHelp(CommandSender $sender): bool {
         if ($sender->hasPermission("betternick.admin")) {
             $sender->sendMessage(TextFormat::YELLOW . "BetterNick Commands:\n" .
