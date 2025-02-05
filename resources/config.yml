@@ -1,0 +1,16 @@
+# Nickname Cooldown (in second)
+cooldown: 30
+
+# Maximum allowed nickname length
+max_length: 16
+
+# Format for random nicknames (use {random} for the number)
+random_format: "User{random}"
+
+# List of banned words
+blacklist:
+  - "admin"
+  - "owner"
+
+# don't modify
+nicknames: []
