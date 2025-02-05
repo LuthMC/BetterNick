@@ -9,9 +9,8 @@
 • Blacklist Words                                    
 • Nickname Maximum Length Limit                                    
 • Sound                                    
-• Similarity Check                        
-      - Block nickname too similar to existing player names                                    
-     
+• Similarity Check            
+- Block nickname too similar to existing player names                                    
 ### ⚙️ Commands
 | Commands | Description |
 |---------|-------------|
