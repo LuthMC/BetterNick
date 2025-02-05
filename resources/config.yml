@@ -12,5 +12,12 @@ blacklist:
   - "admin"
   - "owner"
 
+# Auto-Nick
+auto_nick_enabled: false
+auto_nick_format: "User{random}"
+
+# Similarity check
+max_similarity: 3
+
 # don't modify
 nicknames: []
