@@ -19,16 +19,22 @@ class BetterNick extends PluginBase implements Listener {
     private $cooldowns = [];
     private $config;
     private $tempNicknames = [];
+    private $nicknameHistory = [];
+    private $perWorldNick = false;
+    private $worldNicknames = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->config = $this->getConfig();
         $this->nicknames = $this->config->get("nicknames", []);
+        $this->nicknameHistory = $this->config->get("nickname_history", []);
+        $this->perWorldNick = $this->config->get("per_world_nick", false);
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 
     public function onDisable(): void {
         $this->config->set("nicknames", $this->nicknames);
+        $this->config->set("nickname_history", $this->nicknameHistory);
         $this->config->save();
     }
 
@@ -47,8 +53,20 @@ class BetterNick extends PluginBase implements Listener {
 
     public function onPlayerJoin(PlayerJoinEvent $event) {
         $player = $event->getPlayer();
+        $username = $player->getName();
+        
         if ($this->config->get("auto_nick_enabled", false)) {
             $this->applyAutoNick($player);
+        }
+
+        if ($this->perWorldNick) {
+            $world = $player->getWorld()->getFolderName();
+            
+        if (isset($this->worldNicknames[$world][$username])) {
+            $player->setDisplayName($this->worldNicknames[$world][$username]);
+            }
+        } elseif (isset($this->nicknames[$username])) {
+            $player->setDisplayName($this->nicknames[$username]);
         }
     }
 
@@ -84,6 +102,8 @@ class BetterNick extends PluginBase implements Listener {
                 return $this->handleNickTemp($sender, $args);
             case "resetall":
                 return $this->handleResetAll($sender);
+            case "history":
+                return $this->handleNickHistory($sender, $args);
             default:
                 return $this->onNickCommand($sender, array_merge([$subCommand], $args));
         }
@@ -130,12 +150,46 @@ class BetterNick extends PluginBase implements Listener {
         $this->nicknames[$sender->getName()] = $nickname;
         $sender->setDisplayName($nickname);
         $sender->sendMessage(TextFormat::GREEN . "BetterNick | Your nickname has been set to " . TextFormat::WHITE . $nickname);
+
+        if (!isset($this->nicknameHistory[$username])) {
+            $this->nicknameHistory[$username] = [];
+        }
+
+        if ($this->perWorldNick) {
+            $world = $sender->getWorld()->getFolderName();
+            $this->worldNicknames[$world][$username] = $nickname;
+        } else {
+            $this->nicknames[$username] = $nickname;
+        }
         
+        $this->nicknameHistory[$username][] = $nickname;      
         $this->cooldowns[$sender->getName()] = time();
         $this->playSound($sender);
         return true;
     }
 
+    private function handleNickHistory(CommandSender $sender, array $args): bool {
+        if (!$sender->hasPermission("betternick.admin")) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission for this command.");
+            return true;
+        }
+
+        if (count($args) < 1) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | Usage: /nick history <player>");
+            return true;
+        }
+
+        $playerName = array_shift($args);
+        if (!isset($this->nicknameHistory[$playerName]) || empty($this->nicknameHistory[$playerName])) {
+            $sender->sendMessage(TextFormat::YELLOW . "BetterNick | No nickname history for $playerName.");
+            return true;
+        }
+
+        $history = implode(", ", $this->nicknameHistory[$playerName]);
+        $sender->sendMessage(TextFormat::GREEN . "BetterNick | Nickname history for $playerName: " . TextFormat::WHITE . $history);
+        return true;
+    }
+    
     private function handleNickSet(CommandSender $sender, array $args): bool {
         if (!$sender->hasPermission("betternick.admin")) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission for this command.");
@@ -250,6 +304,11 @@ class BetterNick extends PluginBase implements Listener {
             return true;
         }
 
+        if ($this->perWorldNick) {
+            $world = $sender->getWorld()->getFolderName();
+            unset($this->worldNicknames[$world][$username]);
+        }
+        
         $username = $sender->getName();
         if (isset($this->nicknames[$username])) {
             unset($this->nicknames[$username]);
