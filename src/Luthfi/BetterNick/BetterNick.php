@@ -210,10 +210,8 @@ class BetterNick extends PluginBase implements Listener {
             return true;
         }
 
-        if (!$this->setNickname($sender, $nickname)) {
-        return false;
-        }
-        
+        $this->nicknames[$sender->getName()] = $nickname;
+        $sender->setDisplayName($nickname);    
         $this->tempNicknames[$sender->getName()] = time() + $duration;  
 
         $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {  
@@ -269,14 +267,14 @@ class BetterNick extends PluginBase implements Listener {
             return true;
         }
 
+        $format = $this->config->get("random_format", "Player{random}");
+        $randomNumber = mt_rand(1000, 9999);
+        $randomNick = str_replace("{random}", $randomNumber, $format);
+
         if ($this->isTooSimilar($randomNick)) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | Generated nickname is too similar to existing names.");
             return false;
         }
-        
-        $format = $this->config->get("random_format", "Player{random}");
-        $randomNumber = mt_rand(1000, 9999);
-        $randomNick = str_replace("{random}", $randomNumber, $format);
 
         $this->nicknames[$sender->getName()] = $randomNick;
         $sender->setDisplayName($randomNick);
