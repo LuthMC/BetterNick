@@ -19,5 +19,8 @@ auto_nick_format: "User{random}"
 # Similarity check
 max_similarity: 3
 
+# Per-world Nickname
+per_world_nick: false
+
 # don't modify
 nicknames: []
