@@ -110,6 +110,8 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onNickCommand(CommandSender $sender, array $args): bool {
+        $username = $player->getName();
+        
         if (!$sender instanceof Player) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | This command can only be used in-game.");
             return true;
@@ -299,6 +301,8 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onUnnickCommand(CommandSender $sender): bool {
+        $username = $player->getName();
+        
         if (!$sender instanceof Player) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | This command can only be used in-game.");
             return true;
