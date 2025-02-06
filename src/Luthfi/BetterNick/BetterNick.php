@@ -39,8 +39,17 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
+        if (!$sender->hasPermission("betternick.use")) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission to use this command.");
+            return true;
+        }
+
         switch ($command->getName()) {
             case "nick":
+                if (isset($args[0]) && in_array(strtolower($args[0]), ["set", "reset", "resetall", "history"]) && !$sender->hasPermission("betternick.admin")) {
+                    $sender->sendMessage(TextFormat::RED . "BetterNick | You don't have permission for this command.");
+                    return true;
+                }
                 return $this->handleNickCommand($sender, $args);
             case "unnick":
                 return $this->onUnnickCommand($sender);
@@ -110,17 +119,16 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onNickCommand(CommandSender $sender, array $args): bool {
-        $player = $event->getPlayer();
-        $username = $player->getName();
-        
         if (!$sender instanceof Player) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | This command can only be used in-game.");
             return true;
         }
 
+        $username = $sender->getName();
+
         $cooldown = $this->config->get("cooldown", 30);
-        if (isset($this->cooldowns[$sender->getName()]) && time() - $this->cooldowns[$sender->getName()] < $cooldown) {
-            $remaining = $cooldown - (time() - $this->cooldowns[$sender->getName()]);
+        if (isset($this->cooldowns[$username]) && time() - $this->cooldowns[$username] < $cooldown) {
+            $remaining = $cooldown - (time() - $this->cooldowns[$username]);
             $sender->sendMessage(TextFormat::RED . "BetterNick | Please wait $remaining seconds before changing your nickname again.");
             return true;
         }
@@ -302,20 +310,18 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onUnnickCommand(CommandSender $sender): bool {
-        $player = $event->getPlayer();
-        $username = $player->getName();
-        
         if (!$sender instanceof Player) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | This command can only be used in-game.");
             return true;
         }
 
+        $username = $sender->getName();
+        
         if ($this->perWorldNick) {
             $world = $sender->getWorld()->getFolderName();
             unset($this->worldNicknames[$world][$username]);
         }
         
-        $username = $sender->getName();
         if (isset($this->nicknames[$username])) {
             unset($this->nicknames[$username]);
             $sender->setDisplayName($username);
