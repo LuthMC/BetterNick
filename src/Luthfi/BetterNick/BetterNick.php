@@ -110,6 +110,7 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onNickCommand(CommandSender $sender, array $args): bool {
+        $player = $event->getPlayer();
         $username = $player->getName();
         
         if (!$sender instanceof Player) {
@@ -301,6 +302,7 @@ class BetterNick extends PluginBase implements Listener {
     }
 
     private function onUnnickCommand(CommandSender $sender): bool {
+        $player = $event->getPlayer();
         $username = $player->getName();
         
         if (!$sender instanceof Player) {
