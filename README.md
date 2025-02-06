@@ -1,4 +1,5 @@
 # BetterNick
+[![](https://poggit.pmmp.io/shield.state/BetterNick)](https://poggit.pmmp.io/p/BetterNick)
 ### 💡 Feature
 • Set/Unset Nickname                                    
 • Reset Nickname                                    
@@ -27,6 +28,7 @@
 ### 🔒 Permission
 | Permission | Description |
 |---------|-------------|
+| ```betternick.use``` | Allow use nick command |
 | ```betternick.admin``` | Allow managing other player nicknames |
 
 ### 🔗 Download
