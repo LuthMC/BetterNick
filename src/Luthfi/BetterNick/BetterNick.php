@@ -13,7 +13,7 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\world\sound\PopSound;
 
-class BetterNick extends PluginBase {
+class BetterNick extends PluginBase implements Listener {
 
     private $nicknames = [];
     private $cooldowns = [];
@@ -53,6 +53,10 @@ class BetterNick extends PluginBase {
     }
 
     private function applyAutoNick(Player $player) {
+        if (isset($this->nicknames[$player->getName()])) {
+        return;
+        }
+        
         $format = $this->config->get("auto_nick_format", "User");
         $randomNumber = mt_rand(1000, 9999);
         $nickname = str_replace("{random}", $randomNumber, $format);
@@ -118,16 +122,17 @@ class BetterNick extends PluginBase {
             }
         }
 
-        $this->nicknames[$sender->getName()] = $nickname;
-        $sender->setDisplayName($nickname);
-        $sender->sendMessage(TextFormat::GREEN . "BetterNick | Your nickname has been set to " . TextFormat::WHITE . $nickname);
-        
         if ($this->isTooSimilar($nickname)) {
             $sender->sendMessage(TextFormat::RED . "BetterNick | That nickname is too similar to existing player names.");
             return false;
         }
         
+        $this->nicknames[$sender->getName()] = $nickname;
+        $sender->setDisplayName($nickname);
+        $sender->sendMessage(TextFormat::GREEN . "BetterNick | Your nickname has been set to " . TextFormat::WHITE . $nickname);
+        
         $this->cooldowns[$sender->getName()] = time();
+        $this->playSound($sender);
         return true;
     }
 
@@ -151,6 +156,7 @@ class BetterNick extends PluginBase {
         $nickname = implode(" ", $args);
         $this->nicknames[$target->getName()] = $nickname;
         $target->setDisplayName($nickname);
+        $this->playSound($target);
         $sender->sendMessage(TextFormat::GREEN . "BetterNick | Set " . $target->getName() . "'s nickname to " . $nickname);
         return true;
     }
@@ -180,6 +186,7 @@ class BetterNick extends PluginBase {
         } else {
             $sender->sendMessage(TextFormat::RED . "BetterNick | " . $username . " doesn't have a nickname.");
         }
+        $this->playSound($target);
         return true;
     }
 
@@ -203,16 +210,18 @@ class BetterNick extends PluginBase {
             return true;
         }
 
-        $this->nicknames[$sender->getName()] = $nickname;  
+        if (!$this->setNickname($sender, $nickname)) {
+        return false;
+        }
+        
         $this->tempNicknames[$sender->getName()] = time() + $duration;  
 
         $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($sender): void {  
-           if (isset($this->tempNicknames[$sender->getName()])) {  
-               $this->resetNickname($sender);  
-               $sender->sendMessage(TextFormat::YELLOW . "BetterNick | Your temporary nickname has expired.");  
-               unset($this->tempNicknames[$sender->getName()]);  
-           }  
-       }), $duration * 20);  
+            if ($sender instanceof Player && isset($this->tempNicknames[$sender->getName()])) {  
+                $this->resetNickname($sender);  
+                $sender->sendMessage(TextFormat::YELLOW . "BetterNick | Your temporary nickname has expired.");  
+            }  
+        }), $duration * 20);  
 
        $sender->sendMessage(TextFormat::GREEN . "BetterNick | Temporary nickname set for " . $timeString);
        return true;
@@ -260,6 +269,11 @@ class BetterNick extends PluginBase {
             return true;
         }
 
+        if ($this->isTooSimilar($randomNick)) {
+            $sender->sendMessage(TextFormat::RED . "BetterNick | Generated nickname is too similar to existing names.");
+            return false;
+        }
+        
         $format = $this->config->get("random_format", "Player{random}");
         $randomNumber = mt_rand(1000, 9999);
         $randomNick = str_replace("{random}", $randomNumber, $format);
@@ -285,6 +299,7 @@ class BetterNick extends PluginBase {
 
         $this->nicknames = [];
         $this->tempNicknames = [];
+        
         $sender->sendMessage(TextFormat::GREEN . "BetterNick | All nicknames have been reset.");
         return true;
     }
@@ -333,6 +348,8 @@ class BetterNick extends PluginBase {
                 "/nick reset <player> - Reset someone nickname\n" .
                 "/nick list - List all nicknames\n" .
                 "/unnick - Reset your nickname\n" .
+                "/nick temp <name> <time> - Temporary nickname\n" .
+                "/nick resetall - Reset all nickname\n" .
                 "/randomnick - Get a random nickname");
         } else {
             $sender->sendMessage(TextFormat::YELLOW . "BetterNick Commands:\n/nick <name>\n/unnick\n/randomnick");
