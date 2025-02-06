@@ -16,6 +16,9 @@ commands:
     description: Get a random nickname
     usage: /randomnick
 permissions:
+  betternick.use:
+    description: Allow use nick command
+    default: true
   betternick.admin:
     description: Allow managing other player nicknames
     default: op
