@@ -5,6 +5,7 @@
 • Cooldown Nickname                                    
 • Random Nickname                                    
 • Temporary Nickname                                    
+• Per-world Nickname                              
 • Auto-Nick on Join                                    
 • Blacklist Words                                    
 • Nickname Maximum Length Limit                                    
@@ -17,10 +18,11 @@
 | ```/nick <nick>``` | Set your nickname |
 | ```/unnick``` | Unnick your nickname to default |
 | ```/randomnick``` | Get a random nickname |
+| ```/nick list``` | List all active nickname |
 | ```/nick <nick> <player>``` | Set player nickname (admin only) |
 | ```/nick reset <player>``` | Reset player nickname (admin only) |
 | ```/nick resetall``` | Reset all player nickname (admin only) |
-| ```/nick list``` | List all active nickname |
+| ```/nick history <player>``` | Check Player History (admin only) |
 
 ### 🔒 Permission
 | Permission | Description |
@@ -37,3 +39,4 @@ If you found any bugs, feel free to use [this](https://github.com/LuthMC/BetterN
 ### 📍 Changelog
 • Add more feature                                    
 • Fix links                                    
+• Fix sound                           
