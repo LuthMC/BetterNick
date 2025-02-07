@@ -9,12 +9,16 @@ commands:
       /nick <name>
       /unnick
       /randomnick
+    permission: betternick.use
   unnick:
     description: Reset your nickname
     usage: /unnick
+    permission: betternick.use
   randomnick:
     description: Get a random nickname
     usage: /randomnick
+    permission: betternick.use
+
 permissions:
   betternick.use:
     description: Allow use nick command
